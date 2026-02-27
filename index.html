@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Doy Photo Booth by Leover Jan Taparan - Capture moments with style">
+    <title>Doy Photo Booth | Leover Jan Taparan</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        :root {
+            --neon-pink: #ff006e;
+            --neon-blue: #00f5ff;
+            --neon-purple: #bc13fe;
+            --doy-gold: #ffd700;
+            --dark-bg: #0a0a0f;
+            --card-bg: #151520;
+            --glass: rgba(21, 21, 32, 0.95);
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .bg-lights {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .light {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: float 15s infinite ease-in-out;
+        }
+
+        .light-1 { width: 300px; height: 300px; background: var(--neon-pink); top: -50px; left: -50px; opacity: 0.4; }
+        .light-2 { width: 250px; height: 250px; background: var(--neon-blue); bottom: -30px; right: -30px; opacity: 0.4; animation-delay: -5s; }
+        .light-3 { width: 200px; height: 200px; background: var(--doy-gold); top: 40%; left: 60%; opacity: 0.3; animation-delay: -10s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        .app-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 15px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--neon-pink), var(--doy-gold), var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .owner-name {
+            color: var(--doy-gold);
+            font-size: 14px;
+            margin-top: 5px;
+            letter-spacing: 3px;
+            font-weight: 600;
+        }
+
+        /* Camera Section */
+        .camera-section {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .camera-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            aspect-ratio: 3/4;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        #canvas, #outputCanvas {
+            display: none;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+
+        .template-frame {
+            border: 3px dashed rgba(255,215,0,0.5);
+            border-radius: 15px;
+            flex: 1;
+            margin: 30px 10px;
+            box-shadow: inset 0 0 20px rgba(255,215,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,215,0,0.8);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .countdown {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 120px;
+            font-weight: 900;
+            color: var(--doy-gold);
+            text-shadow: 0 0 30px var(--doy-gold);
+            display: none;
+            z-index: 10;
+            animation: pulse 0.8s infinite;
+        }
+
+        .countdown.active { display: block; }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        /* Camera Controls */
+        .cam-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 5;
+        }
+
+        .cam-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid var(--doy-gold);
+            color: var(--doy-gold);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .cam-btn:active { transform: scale(0.95); background: var(--doy-gold); color: black; }
+
+        /* Filter Strip */
+        .filter-strip {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            border-color: var(--doy-gold);
+            box-shadow: 0 0 15px var(--doy-gold);
+            transform: scale(1.1);
+        }
+
+        /* Main Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+        }
+
+        .btn-shutter {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--doy-gold);
+            border: 4px solid white;
+            box-shadow: 0 0 25px rgba(255,215,0,0.5);
+            font-size: 30px;
+            justify-content: center;
+            padding: 0;
+            color: #000;
+        }
+
+        .btn-shutter:active:not(:disabled) { transform: scale(0.95); box-shadow: 0 0 40px rgba(255,215,0,0.8); }
+        .btn-shutter:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 12px;
+            padding: 10px 20px;
+        }
+
+        /* Template Selector */
+        .template-selector {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .template-label {
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 12px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .template-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .template-card {
+            background: rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        .template-card.active {
+            border-color: var(--doy-gold);
+            background: rgba(255,215,0,0.1);
+            box-shadow: 0 0 20px rgba(255,215,0,0.2);
+        }
+
+        .template-icon { font-size: 28px; margin-bottom: 5px; }
+        .template-name { font-size: 11px; font-weight: 600; }
+
+        /* Gallery Strip */
+        .gallery-section {
+            margin-top: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .gallery-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .gallery-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .gallery-item {
+            min-width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .gallery-item.filled { border-color: var(--doy-gold); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .frame-badge {
+            position: absolute;
+            top: 3px; left: 3px;
+            background: var(--doy-gold);
+            color: #000;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* Output Section */
+        .output-section {
+            display: none;
+            animation: slideUp 0.5s ease;
+            text-align: center;
+        }
+
+        .output-section.active { display: block; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .final-output {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .final-image {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .download-info {
+            background: linear-gradient(135deg, rgba(255,0,110,0.1), rgba(0,245,255,0.1));
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .auto-download-msg {
+            color: var(--doy-gold);
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .download-progress {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .download-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-pink), var(--doy-gold));
+            width: 0%;
+            transition: width 0.3s;
+            animation: loading 2s ease-in-out;
+        }
+
+        @keyframes loading {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #00c853, #64dd17);
+            color: white;
+            padding: 15px;
+            font-size: 16px;
+            box-shadow: 0 5px 20px rgba(0,200,83,0.3);
+        }
+
+        .btn-facebook {
+            background: #1877f2;
+            color: white;
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .btn-retry {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* Flash Effect */
+        .flash {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .flash.active { animation: flashAnim 0.3s ease; }
+
+        @keyframes flashAnim {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .loading.active { display: block; }
+
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--doy-gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* QR Modal */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .qr-modal.active { display: flex; }
+
+        .qr-content {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            text-align: center;
+            max-width: 350px;
+            width: 100%;
+            color: black;
+        }
+
+        .qr-display { margin: 20px 0; padding: 15px; background: white; border-radius: 10px; }
+
+        .close-btn {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255,255,255,0.4);
+            font-size: 12px;
+            margin-top: auto;
+        }
+
+        .footer a { color: var(--doy-gold); text-decoration: none; }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { height: 4px; width: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        ::-webkit-scrollbar-thumb { background: var(--doy-gold); border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div class="bg-lights">
+        <div class="light light-1"></div>
+        <div class="light light-2"></div>
+        <div class="light light-3"></div>
+    </div>
+
+    <div class="flash" id="flash"></div>
+    
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div style="color: var(--doy-gold);">Doy is creating your masterpiece...</div>
+    </div>
+
+    <div class="qr-modal" id="qrModal">
+        <button class="close-btn" onclick="closeQR()">×</button>
+        <div class="qr-content">
+            <h2 style="color: var(--neon-pink); margin-bottom: 10px;">📱 Scan to Download</h2>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Session: <strong id="qrSessionId">---</strong></p>
+            <div class="qr-display" id="qrCode"></div>
+            <p style="font-size: 12px; color: #999; margin-top: 15px;">Powered by Doy Photo Booth</p>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <header class="header">
+            <h1 class="logo">📸 Doy Photo Booth</h1>
+            <p class="owner-name">Leover Jan Taparan</p>
+        </header>
+
+        <!-- CAMERA SECTION -->
+        <div class="camera-section" id="cameraSection">
+            <div class="camera-wrapper">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                <canvas id="outputCanvas"></canvas>
+                
+                <div class="cam-controls">
+                    <button class="cam-btn" onclick="switchCamera()" title="Switch Camera">🔄</button>
+                    <button class="cam-btn" onclick="toggleFlash()" title="Flash">⚡</button>
+                </div>
+
+                <div class="camera-overlay">
+                    <div style="text-align: center;">
+                        <div id="statusText" style="background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 20px; font-size: 12px; display: inline-block;">
+                            Tap Start Camera
+                        </div>
+                    </div>
+                    <div class="template-frame" id="templateFrame">
+                        <span id="frameText">4-Shot Polaroid</span>
+                    </div>
+                    <div></div>
+                </div>
+
+                <div class="countdown" id="countdown">3</div>
+
+                <div class="filter-strip">
+                    <div class="filter-btn active" onclick="setFilter('none')" style="background: linear-gradient(45deg, #333, #666);" title="Normal"></div>
+                    <div class="filter-btn" onclick="setFilter('grayscale')" style="background: linear-gradient(45deg, #333, #999); filter: grayscale(100%);" title="B&W"></div>
+                    <div class="filter-btn" onclick="setFilter('sepia')" style="background: #704214; filter: sepia(100%);" title="Sepia"></div>
+                    <div class="filter-btn" onclick="setFilter('vintage')" style="background: #ff6b6b; filter: contrast(1.2) saturate(1.5);" title="Vintage"></div>
+                    <div class="filter-btn" onclick="setFilter('cool')" style="background: #00f5ff; filter: hue-rotate(180deg) saturate(1.5);" title="Cool"></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-secondary" onclick="startCamera()" id="startBtn">
+                    🎥 Start
+                </button>
+                <button class="btn btn-shutter" onclick="captureSequence()" id="shutterBtn" disabled>
+                    📸
+                </button>
+                <button class="btn btn-secondary" onclick="resetAll()">
+                    🔄 Reset
+                </button>
+            </div>
+
+            <!-- Template Selector -->
+            <div class="template-selector">
+                <div class="template-label">Choose Style</div>
+                <div class="template-options">
+                    <div class="template-card active" onclick="selectTemplate('polaroid', 4, this)">
+                        <div class="template-icon">📷</div>
+                        <div class="template-name">Polaroid<br>4-Shots</div>
+                    </div>
+                    <div class="template-card" onclick="selectTemplate('strip', 3, this)">
+                        <div class="template-icon">🎞️</div>
+                        <div class="template-name">Film<br>Strip</div>
+                    </div>
+                    <div class="template-card" onclick="selectTemplate('grid', 4, this)">
+                        <div class="template-icon">⬜</div>
+                        <div class="template-name">Grid<br>2×2</div>
+                    </div>
+                    <div class="template-card" onclick="selectTemplate('boomerang', 3, this)">
+                        <div class="template-icon">🎬</div>
+                        <div class="template-name">Boom<br>erang</div>
+                    </div>
+                    <div class="template-card" onclick="selectTemplate('classic', 1, this)">
+                        <div class="template-icon">🖼️</div>
+                        <div class="template-name">Classic<br>Single</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Gallery -->
+            <div class="gallery-section" id="gallerySection" style="display: none;">
+                <div class="gallery-label">Captured Photos</div>
+                <div class="gallery-strip" id="galleryStrip"></div>
+            </div>
+        </div>
+
+        <!-- OUTPUT SECTION -->
+        <div class="output-section" id="outputSection">
+            <div class="final-output">
+                <h2 style="color: #333; margin-bottom: 15px; font-size: 20px;">✨ Your Doy Photos!</h2>
+                <div id="finalImageContainer"></div>
+                
+                <div class="download-info">
+                    <div class="auto-download-msg">
+                        <span>⬇️</span> Auto-downloading...
+                    </div>
+                    <div class="download-progress">
+                        <div class="download-bar"></div>
+                    </div>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 13px;">
+                        Photos saved to your gallery with Doy watermark!
+                    </p>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-download" onclick="manualDownload()">
+                    📥 Download Again
+                </button>
+                <a href="https://www.facebook.com/share/1AiwMX7tGG/" target="_blank" style="text-decoration: none;">
+                    <button class="btn btn-facebook">
+                        📘 Visit Leover's Facebook
+                    </button>
+                </a>
+                <button class="btn btn-retry" onclick="retakePhotos()">
+                    📸 Take New Photos
+                </button>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: rgba(255,215,0,0.1); border-radius: 15px; border: 1px solid var(--doy-gold);">
+                <p style="color: var(--doy-gold); font-size: 14px; font-weight: 600;">
+                    📱 Share your photos!
+                </p>
+                <p style="color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 5px;">
+                    Tag @Leover Jan Taparan on Facebook
+                </p>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p><strong>Doy Photo Booth</strong> by Leover Jan Taparan</p>
+            <p style="margin-top: 5px;">
+                <a href="https://www.facebook.com/share/1AiwMX7tGG/" target="_blank">facebook.com/leover.jan.taparan</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Configuration
+        const OWNER_NAME = 'Leover Jan Taparan';
+        const FACEBOOK_URL = 'https://www.facebook.com/share/1AiwMX7tGG/';
+        const BRAND_NAME = 'Doy Photo Booth';
+        
+        // State
+        let stream = null;
+        let currentFacing = 'user'; // 'user' = front, 'environment' = back
+        let currentTemplate = 'polaroid';
+        let photosNeeded = 4;
+        let photosTaken = [];
+        let currentFilter = 'none';
+        let isCapturing = false;
+        let sessionId = generateSessionId();
+
+        // Elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const outputCanvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d');
+        const outCtx = outputCanvas.getContext('2d');
+        const shutterBtn = document.getElementById('shutterBtn');
+        const startBtn = document.getElementById('startBtn');
+        const statusText = document.getElementById('statusText');
+        const countdownEl = document.getElementById('countdown');
+        const flashEl = document.getElementById('flash');
+
+        function generateSessionId() {
+            return 'DOY-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+        }
+
+        // Camera Functions
+        async function startCamera() {
+            try {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                const constraints = {
+                    video: {
+                        facingMode: currentFacing,
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                
+                startBtn.style.display = 'none';
+                shutterBtn.disabled = false;
+                statusText.textContent = 'Ready! Tap shutter';
+                document.getElementById('gallerySection').style.display = 'block';
+                
+            } catch (err) {
+                alert('Camera error: ' + err.message);
+                console.error(err);
+            }
+        }
+
+        function switchCamera() {
+            currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+            if (stream) {
+                startCamera();
+            }
+        }
+
+        function toggleFlash() {
+            // Flash toggle functionality (device dependent)
+            alert('Flash control: ' + (currentFacing === 'environment' ? 'Back camera active' : 'Switch to back camera for flash'));
+        }
+
+        // Template Selection
+        function selectTemplate(template, count, element) {
+            if (isCapturing) return;
+            
+            document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+            element.classList.add('active');
+            
+            currentTemplate = template;
+            photosNeeded = count;
+            
+            const names = {
+                'polaroid': '4-Shot Polaroid',
+                'strip': 'Film Strip (3)',
+                'grid': 'Grid 2×2',
+                'boomerang': 'Boomerang (3)',
+                'classic': 'Classic Single'
+            };
+            
+            document.getElementById('frameText').textContent = names[template];
+            resetGallery();
+        }
+
+        // Filter Functions
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const filters = {
+                'none': 'none',
+                'grayscale': 'grayscale(100%)',
+                'sepia': 'sepia(100%)',
+                'vintage': 'contrast(1.2) saturate(1.3) brightness(1.1)',
+                'cool': 'hue-rotate(180deg) saturate(1.5)'
+            };
+            
+            video.style.filter = filters[filter];
+        }
+
+        // Capture Sequence
+        async function captureSequence() {
+            if (isCapturing || photosTaken.length >= photosNeeded) return;
+            
+            isCapturing = true;
+            shutterBtn.disabled = true;
+            
+            for (let i = photosTaken.length; i < photosNeeded; i++) {
+                await countdownAndCapture(i + 1);
+                if (i < photosNeeded - 1) await sleep(1000);
+            }
+            
+            isCapturing = false;
+            processFinalOutput();
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function countdownAndCapture(frameNum) {
+            statusText.textContent = `Photo ${frameNum}/${photosNeeded}`;
+            
+            // Countdown 3-2-1
+            for (let i = 3; i > 0; i--) {
+                countdownEl.textContent = i;
+                countdownEl.classList.add('active');
+                await sleep(800);
+            }
+            
+            countdownEl.classList.remove('active');
+            
+            // Flash
+            flashEl.classList.add('active');
+            setTimeout(() => flashEl.classList.remove('active'), 200);
+            
+            // Capture
+            capturePhoto(frameNum);
+        }
+
+        function capturePhoto(frameNum) {
+            // Set canvas to video dimensions
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            
+            // Apply mirror for front camera
+            if (currentFacing === 'user') {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+            
+            // Apply filter
+            if (currentFilter !== 'none') {
+                ctx.filter = getFilterCSS();
+            }
+            
+            // Draw video frame
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Reset transform
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.filter = 'none';
+            
+            // Get image data (original quality)
+            const imageData = canvas.toDataURL('image/jpeg', 0.95);
+            photosTaken.push({
+                data: imageData,
+                width: canvas.width,
+                height: canvas.height
+            });
+            
+            // Add to gallery
+            addToGallery(imageData, frameNum);
+        }
+
+        function getFilterCSS() {
+            const filters = {
+                'grayscale': 'grayscale(100%)',
+                'sepia': 'sepia(100%)',
+                'vintage': 'contrast(1.2) saturate(1.3) brightness(1.1)',
+                'cool': 'hue-rotate(180deg) saturate(1.5)'
+            };
+            return filters[currentFilter] || 'none';
+        }
+
+        function addToGallery(imageData, num) {
+            const strip = document.getElementById('galleryStrip');
+            const item = document.createElement('div');
+            item.className = 'gallery-item filled';
+            item.innerHTML = `
+                <div class="frame-badge">${num}</div>
+                <img src="${imageData}" alt="Photo ${num}">
+            `;
+            strip.appendChild(item);
+            strip.scrollLeft = strip.scrollWidth;
+        }
+
+        // Process Final Output with Design
+        async function processFinalOutput() {
+            document.getElementById('loading').classList.add('active');
+            statusText.textContent = 'Doy is designing your photos...';
+            
+            await sleep(500);
+            
+            const finalImage = await createDesignedOutput();
+            
+            document.getElementById('loading').classList.remove('active');
+            
+            // Show output section
+            document.getElementById('cameraSection').style.display = 'none';
+            document.getElementById('outputSection').classList.add('active');
+            
+            // Display final image
+            const container = document.getElementById('finalImageContainer');
+            container.innerHTML = `<img src="${finalImage}" class="final-image" id="finalImg">`;
+            
+            // Auto download
+            setTimeout(() => {
+                autoDownload(finalImage);
+            }, 1000);
+            
+            // Generate QR as backup
+            generateQR(finalImage);
+        }
+
+        async function createDesignedOutput() {
+            const padding = 40;
+            const photoWidth = 600;
+            const photoHeight = 800; // 3:4 aspect ratio
+            const watermarkHeight = 60;
+            
+            let canvasWidth, canvasHeight, layout;
+            
+            // Calculate dimensions based on template
+            switch(currentTemplate) {
+                case 'polaroid':
+                    canvasWidth = (photoWidth + padding) * 2 + padding;
+                    canvasHeight = (photoHeight + padding * 3) * 2 + padding + watermarkHeight;
+                    break;
+                case 'strip':
+                    canvasWidth = photoWidth + padding * 2;
+                    canvasHeight = (photoHeight + padding) * 3 + padding * 3 + watermarkHeight;
+                    break;
+                case 'grid':
+                    canvasWidth = (photoWidth + padding) * 2 + padding;
+                    canvasHeight = (photoHeight + padding) * 2 + padding * 3 + watermarkHeight;
+                    break;
+                case 'boomerang':
+                    canvasWidth = photoWidth + padding * 2;
+                    canvasHeight = (photoHeight * 0.6 + padding) * 3 + padding * 2 + watermarkHeight;
+                    break;
+                case 'classic':
+                    canvasWidth = photoWidth + padding * 2;
+                    canvasHeight = photoHeight + padding * 4 + watermarkHeight;
+                    break;
+            }
+            
+            outputCanvas.width = canvasWidth;
+            outputCanvas.height = canvasHeight;
+            
+            // Background based on template
+            await drawBackground();
+            
+            // Draw photos with designs
+            await drawPhotosWithDesign(photoWidth, photoHeight, padding);
+            
+            // Add watermark
+            drawWatermark(canvasWidth, canvasHeight, watermarkHeight);
+            
+            return outputCanvas.toDataURL('image/jpeg', 0.95);
+        }
+
+        async function drawBackground() {
+            const w = outputCanvas.width;
+            const h = outputCanvas.height;
+            
+            // Create gradient background
+            const gradient = outCtx.createLinearGradient(0, 0, w, h);
+            
+            switch(currentTemplate) {
+                case 'polaroid':
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(1, '#f0f0f0');
+                    break;
+                case 'strip':
+                    gradient.addColorStop(0, '#1a1a2e');
+                    gradient.addColorStop(1, '#16213e');
+                    break;
+                case 'grid':
+                    gradient.addColorStop(0, '#0f3460');
+                    gradient.addColorStop(1, '#533483');
+                    break;
+                case 'boomerang':
+                    gradient.addColorStop(0, '#ff006e');
+                    gradient.addColorStop(0.5, '#8338ec');
+                    gradient.addColorStop(1, '#3a86ff');
+                    break;
+                case 'classic':
+                    gradient.addColorStop(0, '#000000');
+                    gradient.addColorStop(1, '#1a1a1a');
+                    break;
+            }
+            
+            outCtx.fillStyle = gradient;
+            outCtx.fillRect(0, 0, w, h);
+            
+            // Add pattern overlay for some templates
+            if (currentTemplate === 'strip' || currentTemplate === 'grid') {
+                outCtx.fillStyle = 'rgba(255,255,255,0.03)';
+                for (let i = 0; i < w; i += 20) {
+                    outCtx.fillRect(i, 0, 1, h);
+                }
+            }
+        }
+
+        async function drawPhotosWithDesign(pw, ph, pad) {
+            const w = outputCanvas.width;
+            
+            for (let i = 0; i < photosTaken.length; i++) {
+                const img = await loadImage(photosTaken[i].data);
+                let x, y, drawWidth, drawHeight;
+                
+                switch(currentTemplate) {
+                    case 'polaroid':
+                        x = pad + (i % 2) * (pw + pad);
+                        y = pad + Math.floor(i / 2) * (ph + pad * 3);
+                        drawWidth = pw;
+                        drawHeight = ph;
+                        
+                        // Polaroid frame
+                        outCtx.fillStyle = 'white';
+                        outCtx.shadowColor = 'rgba(0,0,0,0.2)';
+                        outCtx.shadowBlur = 20;
+                        outCtx.fillRect(x - 10, y - 10, pw + 20, ph + 80);
+                        outCtx.shadowBlur = 0;
+                        
+                        // Photo
+                        drawCoverImage(img, x, y, pw, ph);
+                        
+                        // Polaroid text
+                        outCtx.fillStyle = '#333';
+                        outCtx.font = 'bold 20px Arial';
+                        outCtx.textAlign = 'center';
+                        outCtx.fillText('DOY', x + pw/2, y + ph + 35);
+                        outCtx.font = '14px Arial';
+                        outCtx.fillStyle = '#666';
+                        outCtx.fillText(new Date().toLocaleDateString(), x + pw/2, y + ph + 55);
+                        break;
+                        
+                    case 'strip':
+                        x = pad;
+                        y = pad * 2 + i * (ph + pad);
+                        drawWidth = pw;
+                        drawHeight = ph;
+                        
+                        // Film strip holes
+                        outCtx.fillStyle = '#000';
+                        outCtx.fillRect(0, y - pad/2, w, ph + pad);
+                        outCtx.fillStyle = '#333';
+                        for (let h = 20; h < w; h += 60) {
+                            outCtx.fillRect(h, y - pad/2 + 10, 30, 20);
+                            outCtx.fillRect(h, y + ph + pad/2 - 30, 30, 20);
+                        }
+                        
+                        drawCoverImage(img, x, y, pw, ph);
+                        break;
+                        
+                    case 'grid':
+                        x = pad + (i % 2) * (pw + pad);
+                        y = pad * 2 + Math.floor(i / 2) * (ph + pad);
+                        drawWidth = pw;
+                        drawHeight = ph;
+                        
+                        // Rounded corners frame
+                        outCtx.fillStyle = 'white';
+                        outCtx.beginPath();
+                        outCtx.roundRect(x - 5, y - 5, pw + 10, ph + 10, 15);
+                        outCtx.fill();
+                        
+                        drawCoverImage(img, x, y, pw, ph);
+                        break;
+                        
+                    case 'boomerang':
+                        x = pad;
+                        y = pad + i * (ph * 0.6 + pad);
+                        drawWidth = pw;
+                        drawHeight = ph * 0.6;
+                        
+                        // Cinematic bars
+                        outCtx.fillStyle = 'rgba(0,0,0,0.3)';
+                        outCtx.fillRect(x, y - 20, pw, 20);
+                        outCtx.fillRect(x, y + drawHeight, pw, 20);
+                        
+                        drawCoverImage(img, x, y, drawWidth, drawHeight);
+                        
+                        // Frame number
+                        outCtx.fillStyle = 'rgba(255,215,0,0.9)';
+                        outCtx.font = 'bold 24px Arial';
+                        outCtx.fillText(`${i + 1}/3`, x + 20, y + 40);
+                        break;
+                        
+                    case 'classic':
+                        x = pad;
+                        y = pad * 2;
+                        drawWidth = pw;
+                        drawHeight = ph;
+                        
+                        // Elegant frame
+                        outCtx.strokeStyle = 'var(--doy-gold)';
+                        outCtx.lineWidth = 5;
+                        outCtx.strokeRect(x - 15, y - 15, pw + 30, ph + 30);
+                        
+                        // Corner decorations
+                        const cornerSize = 30;
+                        outCtx.fillStyle = 'var(--doy-gold)';
+                        // Top left
+                        outCtx.fillRect(x - 15, y - 15, cornerSize, 5);
+                        outCtx.fillRect(x - 15, y - 15, 5, cornerSize);
+                        // Top right
+                        outCtx.fillRect(x + pw + 15 - cornerSize, y - 15, cornerSize, 5);
+                        outCtx.fillRect(x + pw + 10, y - 15, 5, cornerSize);
+                        // Bottom left
+                        outCtx.fillRect(x - 15, y + ph + 10, cornerSize, 5);
+                        outCtx.fillRect(x - 15, y + ph + 15 - cornerSize, 5, cornerSize);
+                        // Bottom right
+                        outCtx.fillRect(x + pw + 15 - cornerSize, y + ph + 10, cornerSize, 5);
+                        outCtx.fillRect(x + pw + 10, y + ph + 15 - cornerSize, 5, cornerSize);
+                        
+                        drawCoverImage(img, x, y, pw, ph);
+                        break;
+                }
+            }
+        }
+
+        function drawCoverImage(img, x, y, w, h) {
+            // Calculate cover fit (no stretching)
+            const scale = Math.max(w / img.width, h / img.height);
+            const newWidth = img.width * scale;
+            const newHeight = img.height * scale;
+            const offsetX = (w - newWidth) / 2;
+            const offsetY = (h - newHeight) / 2;
+            
+            outCtx.drawImage(img, x + offsetX, y + offsetY, newWidth, newHeight);
+            
+            // Apply filter if needed
+            if (currentFilter !== 'none') {
+                outCtx.globalCompositeOperation = 'source-atop';
+                outCtx.fillStyle = getOverlayColor();
+                outCtx.fillRect(x, y, w, h);
+                outCtx.globalCompositeOperation = 'source-over';
+            }
+        }
+
+        function getOverlayColor() {
+            const overlays = {
+                'grayscale': 'rgba(0,0,0,0)',
+                'sepia': 'rgba(112, 66, 20, 0.3)',
+                'vintage': 'rgba(255, 100, 100, 0.1)',
+                'cool': 'rgba(0, 100, 255, 0.1)'
+            };
+            return overlays[currentFilter] || 'transparent';
+        }
+
+        function drawWatermark(w, h, wh) {
+            const y = h - wh;
+            
+            // Watermark background
+            outCtx.fillStyle = 'rgba(0,0,0,0.8)';
+            outCtx.fillRect(0, y, w, wh);
+            
+            // Brand name
+            outCtx.fillStyle = 'var(--doy-gold)';
+            outCtx.font = 'bold 24px Arial';
+            outCtx.textAlign = 'left';
+            outCtx.fillText('DOY PHOTO BOOTH', 20, y + 38);
+            
+            // Owner name
+            outCtx.fillStyle = 'white';
+            outCtx.font = '16px Arial';
+            outCtx.fillText('Leover Jan Taparan', 20, y + 55);
+            
+            // Facebook
+            outCtx.textAlign = 'right';
+            outCtx.fillStyle = '#1877f2';
+            outCtx.font = 'bold 14px Arial';
+            outCtx.fillText('facebook.com/leover.jan.taparan', w - 20, y + 45);
+            
+            // QR Code area (small)
+            outCtx.fillStyle = 'white';
+            outCtx.fillRect(w - 150, y + 5, 50, 50);
+            outCtx.fillStyle = 'black';
+            outCtx.font = '10px Arial';
+            outCtx.textAlign = 'center';
+            outCtx.fillText('SCAN', w - 125, y + 35);
+        }
+
+        function loadImage(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = src;
+            });
+        }
+
+        // Download Functions
+        function autoDownload(imageData) {
+            const link = document.createElement('a');
+            link.download = `DoyBooth_${sessionId}_${currentTemplate}.jpg`;
+            link.href = imageData;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Update UI
+            document.querySelector('.auto-download-msg').innerHTML = '<span>✅</span> Saved to gallery!';
+            document.querySelector('.download-info').style.background = 'rgba(0,200,83,0.1)';
+            document.querySelector('.download-info').style.borderColor = '#00c853';
+        }
+
+        function manualDownload() {
+            const finalImg = document.getElementById('finalImg');
+            if (finalImg) {
+                const link = document.createElement('a');
+                link.download = `DoyBooth_${sessionId}_${currentTemplate}.jpg`;
+                link.href = finalImg.src;
+                link.click();
+            }
+        }
+
+        // QR Code
+        function generateQR(imageData) {
+            // Store in localStorage for retrieval
+            localStorage.setItem(`doy_session_${sessionId}`, imageData);
+            
+            const qrContainer = document.getElementById('qrCode');
+            qrContainer.innerHTML = '';
+            
+            const qrUrl = `${window.location.origin}${window.location.pathname}?get=${sessionId}`;
+            
+            new QRCode(qrContainer, {
+                text: qrUrl,
+                width: 200,
+                height: 200,
+                colorDark: '#000',
+                colorLight: '#fff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            document.getElementById('qrSessionId').textContent = sessionId;
+        }
+
+        function showQR() {
+            document.getElementById('qrModal').classList.add('active');
+        }
+
+        function closeQR() {
+            document.getElementById('qrModal').classList.remove('active');
+        }
+
+        // Reset Functions
+        function resetGallery() {
+            photosTaken = [];
+            document.getElementById('galleryStrip').innerHTML = '';
+            sessionId = generateSessionId();
+        }
+
+        function resetAll() {
+            resetGallery();
+            statusText.textContent = 'Tap Start Camera';
+            if (stream) {
+                shutterBtn.disabled = false;
+            }
+        }
+
+        function retakePhotos() {
+            document.getElementById('outputSection').classList.remove('active');
+            document.getElementById('cameraSection').style.display = 'block';
+            resetAll();
+            window.scrollTo(0, 0);
+        }
+
+        // Check for QR scan download
+        window.addEventListener('load', () => {
+            const params = new URLSearchParams(window.location.search);
+            const getSession = params.get('get');
+            
+            if (getSession) {
+                const imageData = localStorage.getItem(`doy_session_${getSession}`);
+                if (imageData) {
+                    // Auto download mode
+                    document.body.innerHTML = `
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:var(--dark-bg);color:white;padding:20px;text-align:center;">
+                            <h1 style="color:var(--doy-gold);margin-bottom:20px;">📸 Doy Photo Booth</h1>
+                            <p>Downloading your photos...</p>
+                            <div style="margin-top:30px;padding:20px;background:rgba(255,255,255,0.1);border-radius:15px;">
+                                <p style="font-size:14px;color:#aaa;">If download doesn't start automatically,</p>
+                                <a href="${imageData}" download="DoyBooth_${getSession}.jpg" style="color:var(--doy-gold);display:block;margin-top:10px;font-weight:bold;">Click here to download</a>
+                            </div>
+                            <p style="margin-top:30px;font-size:12px;color:#666;">By Leover Jan Taparan</p>
+                        </div>
+                    `;
+                    
+                    // Trigger download
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.download = `DoyBooth_${getSession}.jpg`;
+                        link.href = imageData;
+                        link.click();
+                    }, 500);
+                } else {
+                    // Expired
+                    document.body.innerHTML = `
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:var(--dark-bg);color:white;padding:20px;text-align:center;">
+                            <h1 style="color:#ff006e;margin-bottom:20px;">⏰ Session Expired</h1>
+                            <p style="margin-bottom:30px;">This photo session has expired or is not found.</p>
+                            <button onclick="window.location.href='${window.location.pathname}'" style="padding:15px 30px;background:var(--doy-gold);color:black;border:none;border-radius:25px;font-weight:bold;cursor:pointer;">
+                                📸 Start New Doy Photo Booth
+                            </button>
+                            <p style="margin-top:30px;font-size:12px;color:#666;">By Leover Jan Taparan</p>
+                        </div>
+                    `;
+                }
+            }
+        });
+
+        // Cleanup
+        window.onbeforeunload = () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    </script>
+</body>
+</html>
